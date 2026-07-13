@@ -604,13 +604,15 @@ def get_user_selections():
         )
         reasoning_effort = ask_openai_reasoning_effort()
     elif provider_lower == "anthropic":
-        console.print(
-            create_question_box(
-                "Step 8: Effort Level",
-                "Configure Claude effort level"
+        from tradingagents.llm_clients.anthropic_client import _model_supports_effort
+        if _model_supports_effort(selected_shallow_thinker) or _model_supports_effort(selected_deep_thinker):
+            console.print(
+                create_question_box(
+                    "Step 8: Effort Level",
+                    "Configure Claude effort level"
+                )
             )
-        )
-        anthropic_effort = ask_anthropic_effort()
+            anthropic_effort = ask_anthropic_effort()
 
     return {
         "ticker": selected_ticker,

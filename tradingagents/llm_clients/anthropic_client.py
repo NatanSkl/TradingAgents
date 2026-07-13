@@ -1,3 +1,4 @@
+import re
 from typing import Any, Optional
 
 from langchain_anthropic import ChatAnthropic
@@ -9,6 +10,16 @@ _PASSTHROUGH_KWARGS = (
     "timeout", "max_retries", "api_key", "max_tokens",
     "callbacks", "http_client", "http_async_client", "effort",
 )
+
+# Only Opus-tier and claude-3-7-sonnet models support the extended-thinking
+# `effort` parameter. Haiku and standard Sonnet variants reject it with a 400.
+_EFFORT_SUPPORTED_PATTERNS = re.compile(
+    r"^claude-(3-7-sonnet|opus-\d)", re.IGNORECASE
+)
+
+
+def _model_supports_effort(model: str) -> bool:
+    return bool(_EFFORT_SUPPORTED_PATTERNS.match(model))
 
 
 class NormalizedChatAnthropic(ChatAnthropic):
@@ -38,8 +49,11 @@ class AnthropicClient(BaseLLMClient):
             llm_kwargs["base_url"] = self.base_url
 
         for key in _PASSTHROUGH_KWARGS:
-            if key in self.kwargs:
-                llm_kwargs[key] = self.kwargs[key]
+            if key not in self.kwargs:
+                continue
+            if key == "effort" and not _model_supports_effort(self.model):
+                continue
+            llm_kwargs[key] = self.kwargs[key]
 
         return NormalizedChatAnthropic(**llm_kwargs)
 
